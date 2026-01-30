@@ -348,6 +348,107 @@ fastify.get('/api/products', {
     }))
 })
 
+// Crear producto
+fastify.post('/api/products', {
+    preHandler: [fastify.authenticate as any],
+}, async (request, reply) => {
+    const user = request.user as UserPayload
+
+    if (!hasPermission(user.role, 'products:create')) {
+        return reply.code(403).send({ error: 'No tienes permisos para crear productos' })
+    }
+
+    const { code, name, price, cost, categoryId, minStock } = request.body as {
+        code?: string
+        name: string
+        price: number
+        cost?: number
+        categoryId?: string
+        minStock?: number
+    }
+
+    if (!name || price === undefined) {
+        return reply.code(400).send({ error: 'Nombre y precio son requeridos' })
+    }
+
+    // Generar código si no se proporciona
+    const productCode = code || `PROD-${Date.now().toString(36).toUpperCase()}`
+
+    const product = await prisma.product.create({
+        data: {
+            code: productCode,
+            name,
+            price,
+            cost: cost || null,
+            categoryId: categoryId || null,
+            minStock: minStock || 5,
+        },
+        include: { category: true },
+    })
+
+    await logAction(user.id, 'CREATE_PRODUCT', 'Product', product.id, { name, price })
+
+    return product
+})
+
+// Actualizar producto
+fastify.put('/api/products/:id', {
+    preHandler: [fastify.authenticate as any],
+}, async (request, reply) => {
+    const user = request.user as UserPayload
+
+    if (!hasPermission(user.role, 'products:edit')) {
+        return reply.code(403).send({ error: 'No tienes permisos para editar productos' })
+    }
+
+    const { id } = request.params as { id: string }
+    const { name, price, cost, categoryId, active } = request.body as {
+        name?: string
+        price?: number
+        cost?: number | null
+        categoryId?: string | null
+        active?: boolean
+    }
+
+    const product = await prisma.product.update({
+        where: { id },
+        data: {
+            ...(name && { name }),
+            ...(price !== undefined && { price }),
+            ...(cost !== undefined && { cost }),
+            ...(categoryId !== undefined && { categoryId }),
+            ...(active !== undefined && { active }),
+        },
+        include: { category: true },
+    })
+
+    await logAction(user.id, 'UPDATE_PRODUCT', 'Product', product.id, { name: product.name })
+
+    return product
+})
+
+// Eliminar producto (soft delete)
+fastify.delete('/api/products/:id', {
+    preHandler: [fastify.authenticate as any],
+}, async (request, reply) => {
+    const user = request.user as UserPayload
+
+    if (!hasPermission(user.role, 'products:delete')) {
+        return reply.code(403).send({ error: 'No tienes permisos para eliminar productos' })
+    }
+
+    const { id } = request.params as { id: string }
+
+    await prisma.product.update({
+        where: { id },
+        data: { active: false },
+    })
+
+    await logAction(user.id, 'DELETE_PRODUCT', 'Product', id, {})
+
+    return { success: true }
+})
+
 // ======== RUTAS DE VENTAS ========
 
 fastify.post('/api/sales', {
