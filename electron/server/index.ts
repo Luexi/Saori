@@ -713,6 +713,92 @@ fastify.delete('/api/customers/:id', {
     return { success: true }
 })
 
+// ======== RUTAS DE GASTOS ========
+
+fastify.get('/api/expenses', {
+    preHandler: [fastify.authenticate as any],
+}, async (request, reply) => {
+    const user = request.user as UserPayload
+
+    if (!hasPermission(user.role, 'expenses:read')) {
+        return reply.code(403).send({ error: 'No tienes permisos para ver gastos' })
+    }
+
+    const { categoryId } = request.query as { categoryId?: string }
+
+    const expenses = await prisma.expense.findMany({
+        where: categoryId ? { categoryId } : undefined,
+        include: { category: true },
+        orderBy: { date: 'desc' },
+    })
+
+    return expenses
+})
+
+fastify.post('/api/expenses', {
+    preHandler: [fastify.authenticate as any],
+}, async (request, reply) => {
+    const user = request.user as UserPayload
+
+    if (!hasPermission(user.role, 'expenses:create')) {
+        return reply.code(403).send({ error: 'No tienes permisos para crear gastos' })
+    }
+
+    const { amount, description, categoryId, date } = request.body as {
+        amount: number
+        description: string
+        categoryId?: string
+        date?: string
+    }
+
+    if (!amount || !description) {
+        return reply.code(400).send({ error: 'Monto y descripción son requeridos' })
+    }
+
+    const expense = await prisma.expense.create({
+        data: {
+            amount,
+            description,
+            categoryId: categoryId || null,
+            date: date ? new Date(date) : new Date(),
+            userId: user.id,
+        },
+    })
+
+    await logAction(user.id, 'CREATE_EXPENSE', 'Expense', expense.id, { amount, description })
+
+    return expense
+})
+
+fastify.delete('/api/expenses/:id', {
+    preHandler: [fastify.authenticate as any],
+}, async (request, reply) => {
+    const user = request.user as UserPayload
+
+    if (!hasPermission(user.role, 'expenses:delete')) {
+        return reply.code(403).send({ error: 'No tienes permisos para eliminar gastos' })
+    }
+
+    const { id } = request.params as { id: string }
+
+    await prisma.expense.delete({
+        where: { id },
+    })
+
+    await logAction(user.id, 'DELETE_EXPENSE', 'Expense', id, {})
+
+    return { success: true }
+})
+
+// ======== RUTAS DE CATEGORÍAS DE GASTOS ========
+
+fastify.get('/api/expense-categories', async () => {
+    const categories = await prisma.expenseCategory.findMany({
+        orderBy: { name: 'asc' },
+    })
+    return categories
+})
+
 // ======== RUTAS DE CATEGORÍAS ========
 
 fastify.get('/api/categories', async () => {

@@ -6,6 +6,7 @@ import Dashboard from '@/pages/Dashboard'
 import POS from '@/pages/POS'
 import Inventario from '@/pages/Inventario'
 import Clientes from '@/pages/Clientes'
+import Finanzas from '@/pages/Finanzas'
 import Logs from '@/pages/Logs'
 import Proximamente from '@/pages/Proximamente'
 
@@ -39,7 +40,7 @@ function App() {
                     <Route path="pos" element={<POS />} />
                     <Route path="clientes" element={<Clientes />} />
                     <Route path="productos" element={<Inventario />} />
-                    <Route path="finanzas" element={<Proximamente titulo="Finanzas" />} />
+                    <Route path="finanzas" element={<Finanzas />} />
                     <Route path="reportes" element={<Proximamente titulo="Reportes" />} />
                     <Route path="proveedores" element={<Proximamente titulo="Proveedores" />} />
                     <Route path="usuarios" element={<Proximamente titulo="Usuarios" />} />

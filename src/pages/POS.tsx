@@ -13,12 +13,23 @@ const mockProducts = [
     { productId: 'p8', code: 'PROD-008', name: 'Hub USB-C', price: 450, category: 'Electrónica', stock: 25 },
 ]
 
+// Mock de clientes
+const mockCustomers = [
+    { id: 'general', name: 'Público en General', email: null },
+    { id: 'c1', name: 'María García López', email: 'maria@email.com' },
+    { id: 'c2', name: 'Juan Pérez Rodríguez', email: 'juan.perez@empresa.com' },
+    { id: 'c3', name: 'Ana Martínez Sánchez', email: null },
+    { id: 'c4', name: 'Empresa ABC S.A. de C.V.', email: 'compras@empresaabc.com' },
+]
+
 const categories = ['Todos', 'Electrónica', 'Alimentos', 'General']
 
 export default function POS() {
     const [search, setSearch] = useState('')
     const [selectedCategory, setSelectedCategory] = useState('Todos')
     const [showPaymentModal, setShowPaymentModal] = useState(false)
+    const [selectedCustomer, setSelectedCustomer] = useState(mockCustomers[0]) // Público en General por defecto
+    const [showCustomerDropdown, setShowCustomerDropdown] = useState(false)
 
     const {
         items,
@@ -45,10 +56,11 @@ export default function POS() {
     // Procesar pago
     const handlePayment = (method: string, amountPaid: number) => {
         // Aquí se enviaría al backend
-        console.log('Procesando pago:', { method, amountPaid, total, items })
+        console.log('Procesando pago:', { method, amountPaid, total, items, customer: selectedCustomer })
 
         // Limpiar carrito
         clearCart()
+        setSelectedCustomer(mockCustomers[0]) // Reset a Público en General
         setShowPaymentModal(false)
     }
 
@@ -79,8 +91,8 @@ export default function POS() {
                                 key={cat}
                                 onClick={() => setSelectedCategory(cat)}
                                 className={`px-4 py-2 text-sm font-medium rounded-lg whitespace-nowrap transition-colors ${selectedCategory === cat
-                                        ? 'bg-primary text-white shadow-lg shadow-primary/30'
-                                        : 'bg-surface-light dark:bg-surface-dark text-text-secondary-light dark:text-text-secondary-dark hover:bg-gray-100 dark:hover:bg-gray-800 ring-1 ring-gray-200 dark:ring-gray-700'
+                                    ? 'bg-primary text-white shadow-lg shadow-primary/30'
+                                    : 'bg-surface-light dark:bg-surface-dark text-text-secondary-light dark:text-text-secondary-dark hover:bg-gray-100 dark:hover:bg-gray-800 ring-1 ring-gray-200 dark:ring-gray-700'
                                     }`}
                             >
                                 {cat}
@@ -144,6 +156,71 @@ export default function POS() {
                             Vaciar
                         </button>
                     )}
+                </div>
+
+                {/* Selector de Cliente */}
+                <div className="px-4 py-3 border-b border-gray-100 dark:border-gray-800">
+                    <label className="block text-xs font-medium text-text-secondary-light dark:text-text-secondary-dark mb-2">
+                        Cliente
+                    </label>
+                    <div className="relative">
+                        <button
+                            onClick={() => setShowCustomerDropdown(!showCustomerDropdown)}
+                            className="w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl bg-gray-100 dark:bg-gray-800 text-left hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
+                        >
+                            <div className="flex items-center gap-2">
+                                <div className="size-8 rounded-full bg-primary/10 flex items-center justify-center text-primary text-sm font-bold">
+                                    {selectedCustomer.id === 'general' ? '👤' : selectedCustomer.name.charAt(0)}
+                                </div>
+                                <div>
+                                    <p className="text-sm font-medium text-text-primary-light dark:text-white">
+                                        {selectedCustomer.name}
+                                    </p>
+                                    {selectedCustomer.email && (
+                                        <p className="text-xs text-text-secondary-light dark:text-text-secondary-dark">
+                                            {selectedCustomer.email}
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                            <span className="material-symbols-outlined text-[18px] text-text-secondary-light">
+                                expand_more
+                            </span>
+                        </button>
+
+                        {showCustomerDropdown && (
+                            <div className="absolute top-full left-0 right-0 mt-1 bg-surface-light dark:bg-surface-dark rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 z-10 max-h-48 overflow-y-auto">
+                                {mockCustomers.map((customer) => (
+                                    <button
+                                        key={customer.id}
+                                        onClick={() => {
+                                            setSelectedCustomer(customer)
+                                            setShowCustomerDropdown(false)
+                                        }}
+                                        className={`w-full flex items-center gap-2 px-3 py-2.5 text-left hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors ${selectedCustomer.id === customer.id ? 'bg-primary/5' : ''
+                                            }`}
+                                    >
+                                        <div className="size-8 rounded-full bg-primary/10 flex items-center justify-center text-primary text-sm font-bold">
+                                            {customer.id === 'general' ? '👤' : customer.name.charAt(0)}
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-medium text-text-primary-light dark:text-white">
+                                                {customer.name}
+                                            </p>
+                                            {customer.email && (
+                                                <p className="text-xs text-text-secondary-light dark:text-text-secondary-dark">
+                                                    {customer.email}
+                                                </p>
+                                            )}
+                                        </div>
+                                        {selectedCustomer.id === customer.id && (
+                                            <span className="material-symbols-outlined text-primary text-[18px] ml-auto">check</span>
+                                        )}
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
                 </div>
 
                 {/* Items del Carrito */}
@@ -378,8 +455,8 @@ function PaymentModal({
                                 key={m.id}
                                 onClick={() => setMethod(m.id as typeof method)}
                                 className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-colors ${method === m.id
-                                        ? 'border-primary bg-primary/5 text-primary'
-                                        : 'border-gray-200 dark:border-gray-700 text-text-secondary-light dark:text-text-secondary-dark hover:border-gray-300'
+                                    ? 'border-primary bg-primary/5 text-primary'
+                                    : 'border-gray-200 dark:border-gray-700 text-text-secondary-light dark:text-text-secondary-dark hover:border-gray-300'
                                     }`}
                             >
                                 <span className="material-symbols-outlined text-[24px]">{m.icon}</span>
