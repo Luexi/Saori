@@ -301,6 +301,182 @@ fastify.get('/api/logs', {
     }
 })
 
+// ======== RUTAS DE PRODUCTOS ========
+
+fastify.get('/api/products', {
+    preHandler: [fastify.authenticate as any],
+}, async (request, reply) => {
+    const user = request.user as UserPayload
+
+    if (!hasPermission(user.role, 'products:read')) {
+        return reply.code(403).send({ error: 'No tienes permisos para ver productos' })
+    }
+
+    const { search, category } = request.query as { search?: string; category?: string }
+
+    const products = await prisma.product.findMany({
+        where: {
+            active: true,
+            AND: [
+                search ? {
+                    OR: [
+                        { name: { contains: search } },
+                        { code: { contains: search } },
+                    ]
+                } : {},
+                category ? { categoryId: category } : {},
+            ],
+        },
+        include: {
+            category: true,
+            stocks: {
+                where: { branchId: user.branchId || undefined },
+            },
+        },
+        orderBy: { name: 'asc' },
+    })
+
+    return products.map(p => ({
+        productId: p.id,
+        code: p.code,
+        name: p.name,
+        price: p.price,
+        cost: p.cost,
+        category: p.category?.name || 'General',
+        categoryId: p.categoryId,
+        stock: p.stocks[0]?.quantity || 0,
+    }))
+})
+
+// ======== RUTAS DE VENTAS ========
+
+fastify.post('/api/sales', {
+    preHandler: [fastify.authenticate as any],
+}, async (request, reply) => {
+    const user = request.user as UserPayload
+
+    if (!hasPermission(user.role, 'sales:create')) {
+        return reply.code(403).send({ error: 'No tienes permisos para crear ventas' })
+    }
+
+    const { items, paymentMethod, amountPaid, customerId, notes } = request.body as {
+        items: Array<{ productId: string; quantity: number; price: number; discount: number }>
+        paymentMethod: string
+        amountPaid: number
+        customerId?: string
+        notes?: string
+    }
+
+    if (!items || items.length === 0) {
+        return reply.code(400).send({ error: 'La venta debe tener al menos un producto' })
+    }
+
+    // Calcular totales
+    const TAX_RATE = 0.16
+    const subtotal = items.reduce((sum, item) => {
+        const itemTotal = item.price * item.quantity
+        const itemDiscount = itemTotal * (item.discount / 100)
+        return sum + (itemTotal - itemDiscount)
+    }, 0)
+    const taxAmount = subtotal * TAX_RATE
+    const total = subtotal + taxAmount
+    const change = paymentMethod === 'CASH' ? Math.max(0, amountPaid - total) : 0
+
+    // Generar folio
+    const lastSale = await prisma.sale.findFirst({
+        orderBy: { createdAt: 'desc' },
+        select: { folio: true },
+    })
+    const nextFolioNum = lastSale?.folio
+        ? parseInt(lastSale.folio.replace('V-', '')) + 1
+        : 1
+    const folio = `V-${String(nextFolioNum).padStart(6, '0')}`
+
+    // Obtener info de productos para snapshot
+    const productInfos = await prisma.product.findMany({
+        where: { id: { in: items.map(i => i.productId) } },
+        select: { id: true, name: true, code: true },
+    })
+    const productMap = new Map(productInfos.map(p => [p.id, p]))
+
+    // Crear venta con transacción
+    const sale = await prisma.$transaction(async (tx) => {
+        // Crear venta
+        const newSale = await tx.sale.create({
+            data: {
+                folio,
+                userId: user.id,
+                branchId: user.branchId!,
+                customerId: customerId || null,
+                subtotal,
+                taxAmount,
+                discount: items.reduce((sum, i) => sum + (i.price * i.quantity * i.discount / 100), 0),
+                total,
+                status: 'COMPLETED',
+                notes: notes || null,
+                items: {
+                    create: items.map(item => {
+                        const prod = productMap.get(item.productId)
+                        return {
+                            productId: item.productId,
+                            productName: prod?.name || 'Producto',
+                            productCode: prod?.code || 'N/A',
+                            quantity: item.quantity,
+                            unitPrice: item.price,
+                            discount: item.discount,
+                            subtotal: item.price * item.quantity * (1 - item.discount / 100),
+                        }
+                    }),
+                },
+            },
+            include: { items: true },
+        })
+
+        // Actualizar stock
+        for (const item of items) {
+            await tx.productStock.updateMany({
+                where: {
+                    productId: item.productId,
+                    branchId: user.branchId!,
+                },
+                data: {
+                    quantity: { decrement: item.quantity },
+                },
+            })
+        }
+
+        return newSale
+    })
+
+    // Log de la venta
+    await logAction(user.id, 'CREATE_SALE', 'Sale', sale.id, {
+        folio: sale.folio,
+        total: sale.total,
+        items: items.length,
+        paymentMethod,
+    })
+
+    return {
+        success: true,
+        sale: {
+            id: sale.id,
+            folio: sale.folio,
+            total: sale.total,
+            change,
+            timestamp: sale.createdAt,
+        },
+    }
+})
+
+// ======== RUTAS DE CATEGORÍAS ========
+
+fastify.get('/api/categories', async () => {
+    const categories = await prisma.category.findMany({
+        orderBy: { name: 'asc' },
+    })
+    return categories
+})
+
 // ======== HEALTH CHECK ========
 
 fastify.get('/api/health', async () => {
