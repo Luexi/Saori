@@ -799,6 +799,174 @@ fastify.get('/api/expense-categories', async () => {
     return categories
 })
 
+// ======== RUTAS DE PERSONAL (RH) ========
+
+// GET Positions
+fastify.get('/api/positions', {
+    preHandler: [fastify.authenticate as any],
+}, async (request, reply) => {
+    const user = request.user as UserPayload
+
+    if (!hasPermission(user.role, 'employees:read')) {
+        return reply.code(403).send({ error: 'No tienes permisos para ver puestos' })
+    }
+
+    const positions = await prisma.position.findMany({
+        where: { active: true },
+        include: { _count: { select: { employees: true } } },
+        orderBy: { name: 'asc' },
+    })
+
+    return positions.map(p => ({
+        ...p,
+        employees: p._count.employees,
+    }))
+})
+
+// GET Employees
+fastify.get('/api/employees', {
+    preHandler: [fastify.authenticate as any],
+}, async (request, reply) => {
+    const user = request.user as UserPayload
+
+    if (!hasPermission(user.role, 'employees:read')) {
+        return reply.code(403).send({ error: 'No tienes permisos para ver empleados' })
+    }
+
+    const { search } = request.query as { search?: string }
+
+    const employees = await prisma.employee.findMany({
+        where: search ? {
+            OR: [
+                { name: { contains: search } },
+                { code: { contains: search } },
+                { email: { contains: search } },
+            ],
+        } : undefined,
+        include: { position: true },
+        orderBy: { name: 'asc' },
+    })
+
+    return employees
+})
+
+// POST Employee
+fastify.post('/api/employees', {
+    preHandler: [fastify.authenticate as any],
+}, async (request, reply) => {
+    const user = request.user as UserPayload
+
+    if (!hasPermission(user.role, 'employees:create')) {
+        return reply.code(403).send({ error: 'No tienes permisos para crear empleados' })
+    }
+
+    const { name, email, phone, address, positionId, salary, hireDate, birthDate, notes } = request.body as {
+        name: string
+        email?: string
+        phone?: string
+        address?: string
+        positionId: string
+        salary: number
+        hireDate: string
+        birthDate?: string
+        notes?: string
+    }
+
+    if (!name || !positionId || !salary || !hireDate) {
+        return reply.code(400).send({ error: 'Nombre, puesto, salario y fecha de ingreso son requeridos' })
+    }
+
+    // Generar código EMP-XXXXX
+    const lastEmployee = await prisma.employee.findFirst({
+        orderBy: { code: 'desc' },
+    })
+    const nextNumber = lastEmployee
+        ? parseInt(lastEmployee.code.split('-')[1]) + 1
+        : 1
+    const code = `EMP-${String(nextNumber).padStart(5, '0')}`
+
+    const employee = await prisma.employee.create({
+        data: {
+            code,
+            name,
+            email,
+            phone,
+            address,
+            positionId,
+            salary,
+            hireDate: new Date(hireDate),
+            birthDate: birthDate ? new Date(birthDate) : null,
+            notes,
+        },
+    })
+
+    await logAction(user.id, 'CREATE_EMPLOYEE', 'Employee', employee.id, { name, code })
+
+    return employee
+})
+
+// PUT Employee
+fastify.put('/api/employees/:id', {
+    preHandler: [fastify.authenticate as any],
+}, async (request, reply) => {
+    const user = request.user as UserPayload
+
+    if (!hasPermission(user.role, 'employees:edit')) {
+        return reply.code(403).send({ error: 'No tienes permisos para editar empleados' })
+    }
+
+    const { id } = request.params as { id: string }
+    const { name, email, phone, address, positionId, salary, active, notes } = request.body as {
+        name?: string
+        email?: string
+        phone?: string
+        address?: string
+        positionId?: string
+        salary?: number
+        active?: boolean
+        notes?: string
+    }
+
+    const employee = await prisma.employee.update({
+        where: { id },
+        data: {
+            ...(name && { name }),
+            ...(email !== undefined && { email }),
+            ...(phone !== undefined && { phone }),
+            ...(address !== undefined && { address }),
+            ...(positionId && { positionId }),
+            ...(salary && { salary }),
+            ...(active !== undefined && { active }),
+            ...(notes !== undefined && { notes }),
+        },
+    })
+
+    await logAction(user.id, 'UPDATE_EMPLOYEE', 'Employee', employee.id, { name: employee.name })
+
+    return employee
+})
+
+// DELETE Employee
+fastify.delete('/api/employees/:id', {
+    preHandler: [fastify.authenticate as any],
+}, async (request, reply) => {
+    const user = request.user as UserPayload
+
+    if (!hasPermission(user.role, 'employees:delete')) {
+        return reply.code(403).send({ error: 'No tienes permisos para eliminar empleados' })
+    }
+
+    const { id } = request.params as { id: string }
+
+    await prisma.employee.delete({
+        where: { id },
+    })
+
+    await logAction(user.id, 'DELETE_EMPLOYEE', 'Employee', id, {})
+
+    return { success: true }
+})
+
 // ======== RUTAS DE CATEGORÍAS ========
 
 fastify.get('/api/categories', async () => {

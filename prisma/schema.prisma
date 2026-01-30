@@ -308,6 +308,92 @@ model Purchase {
 }
 
 // ===================
+// RECURSOS HUMANOS
+// ===================
+
+model Position {
+  id          String     @id @default(uuid())
+  name        String     @unique // Gerente, Cajero, Almacenista, etc.
+  description String?
+  baseSalary  Float      @default(0)
+  active      Boolean    @default(true)
+  
+  employees   Employee[]
+  
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model Employee {
+  id          String     @id @default(uuid())
+  code        String     @unique // EMP-001
+  name        String
+  email       String?
+  phone       String?
+  address     String?
+  
+  positionId  String
+  position    Position   @relation(fields: [positionId], references: [id])
+  
+  salary      Float      // Salario actual (puede diferir del base del puesto)
+  hireDate    DateTime
+  birthDate   DateTime?
+  
+  // Relación opcional con User (si el empleado tiene acceso al sistema)
+  userId      String?    @unique
+  
+  active      Boolean    @default(true)
+  notes       String?
+  
+  payrolls    Payroll[]
+  schedules   Schedule[]
+  
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model Payroll {
+  id          String     @id @default(uuid())
+  folio       String     @unique // NOM-000001
+  
+  employeeId  String
+  employee    Employee   @relation(fields: [employeeId], references: [id])
+  
+  period      String     // "2026-01" (año-mes)
+  startDate   DateTime
+  endDate     DateTime
+  
+  baseSalary  Float
+  bonuses     Float      @default(0)
+  deductions  Float      @default(0)
+  total       Float      // baseSalary + bonuses - deductions
+  
+  status      String     @default("PENDING") // PENDING, PAID, CANCELLED
+  paidAt      DateTime?
+  
+  notes       String?
+  
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model Schedule {
+  id          String     @id @default(uuid())
+  
+  employeeId  String
+  employee    Employee   @relation(fields: [employeeId], references: [id])
+  
+  dayOfWeek   Int        // 0=Domingo, 1=Lunes, ..., 6=Sábado
+  startTime   String     // "09:00"
+  endTime     String     // "18:00"
+  
+  active      Boolean    @default(true)
+  
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+// ===================
 // AUDITORÍA
 // ===================
 

@@ -22,6 +22,7 @@ const navItems: NavItem[] = [
     { icon: 'groups', label: 'Clientes', path: '/clientes' },
     { icon: 'inventory_2', label: 'Inventario', path: '/productos' },
     { icon: 'credit_card', label: 'Finanzas', path: '/finanzas' },
+    { icon: 'badge', label: 'Personal', path: '/personal' },
     { icon: 'description', label: 'Reportes', path: '/reportes' },
     { icon: 'local_shipping', label: 'Proveedores', path: '/proveedores' },
 ]
