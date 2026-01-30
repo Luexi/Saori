@@ -1,6 +1,13 @@
 import { NavLink } from 'react-router-dom'
 import { useAuthStore } from '@/stores/authStore'
 
+// Helper para mostrar rol en español
+const roleLabels: Record<string, string> = {
+    ADMIN: 'Administrador',
+    SUPERVISOR: 'Supervisor',
+    VENDEDOR: 'Vendedor',
+}
+
 interface NavItem {
     icon: string
     label: string
@@ -25,6 +32,11 @@ const proximamenteItems: NavItem[] = [
     { icon: 'account_balance', label: 'Contabilidad', path: '/contabilidad' },
 ]
 
+// Items que requieren permisos especiales
+const adminOnlyItems: NavItem[] = [
+    { icon: 'history', label: 'Registro Actividad', path: '/logs' },
+]
+
 const bottomItems: NavItem[] = [
     { icon: 'manage_accounts', label: 'Usuarios', path: '/usuarios' },
     { icon: 'settings', label: 'Configuración', path: '/configuracion' },
@@ -33,6 +45,7 @@ const bottomItems: NavItem[] = [
 export default function Sidebar() {
     const user = useAuthStore((state) => state.user)
     const logout = useAuthStore((state) => state.logout)
+    const isAdmin = useAuthStore((state) => state.isAdmin)
 
     return (
         <aside className="flex w-[80px] lg:w-[260px] flex-col border-r border-gray-200 dark:border-gray-800 bg-surface-light dark:bg-surface-dark transition-all duration-300">
@@ -98,6 +111,26 @@ export default function Sidebar() {
                     {/* Divider */}
                     <div className="my-4 border-t border-gray-100 dark:border-gray-800" />
 
+                    {/* Admin Only - Logs */}
+                    {isAdmin() && adminOnlyItems.map((item) => (
+                        <NavLink
+                            key={item.path}
+                            to={item.path}
+                            className={({ isActive }) =>
+                                `group flex items-center gap-3 rounded-lg px-3 py-3 transition-colors ${isActive
+                                    ? 'bg-primary/10 text-primary dark:text-white'
+                                    : 'text-text-secondary-light hover:bg-gray-100 dark:text-text-secondary-dark dark:hover:bg-gray-800'
+                                }`
+                            }
+                        >
+                            <span className="material-symbols-outlined">{item.icon}</span>
+                            <span className="text-sm font-medium hidden lg:block">{item.label}</span>
+                            <span className="ml-auto text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full hidden lg:block">
+                                Admin
+                            </span>
+                        </NavLink>
+                    ))}
+
                     {/* Bottom Items */}
                     {bottomItems.map((item) => (
                         <NavLink
@@ -126,7 +159,7 @@ export default function Sidebar() {
                             {user?.name || 'Usuario'}
                         </h1>
                         <p className="text-xs text-text-secondary-light dark:text-text-secondary-dark truncate">
-                            {user?.role || 'Rol'}
+                            {user?.role ? roleLabels[user.role] || user.role : 'Rol'}
                         </p>
                     </div>
                     <button

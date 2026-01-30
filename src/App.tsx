@@ -3,6 +3,7 @@ import { useAuthStore } from '@/stores/authStore'
 import Layout from '@/components/layout/Layout'
 import Login from '@/pages/Login'
 import Dashboard from '@/pages/Dashboard'
+import Logs from '@/pages/Logs'
 import Proximamente from '@/pages/Proximamente'
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
@@ -39,6 +40,7 @@ function App() {
                     <Route path="reportes" element={<Proximamente titulo="Reportes" />} />
                     <Route path="proveedores" element={<Proximamente titulo="Proveedores" />} />
                     <Route path="usuarios" element={<Proximamente titulo="Usuarios" />} />
+                    <Route path="logs" element={<Logs />} />
                     <Route path="facturacion" element={<Proximamente titulo="Facturación Electrónica" proximamente />} />
                     <Route path="nomina" element={<Proximamente titulo="Nómina" proximamente />} />
                     <Route path="contabilidad" element={<Proximamente titulo="Contabilidad" proximamente />} />

@@ -1,0 +1,339 @@
+import Fastify from 'fastify'
+import cors from '@fastify/cors'
+import jwt from '@fastify/jwt'
+import { PrismaClient } from '@prisma/client'
+import bcrypt from 'bcryptjs'
+
+const prisma = new PrismaClient()
+
+// Tipos
+interface UserPayload {
+    id: string
+    email: string
+    name: string
+    role: 'ADMIN' | 'SUPERVISOR' | 'VENDEDOR'
+    branchId: string | null
+}
+
+declare module '@fastify/jwt' {
+    interface FastifyJWT {
+        payload: UserPayload
+        user: UserPayload
+    }
+}
+
+// Permisos por rol
+const PERMISSIONS = {
+    ADMIN: [
+        'sales:create', 'sales:read', 'sales:delete',
+        'products:create', 'products:read', 'products:update', 'products:delete',
+        'users:create', 'users:read', 'users:update', 'users:delete',
+        'logs:read',
+        'reports:read',
+    ],
+    SUPERVISOR: [
+        'sales:create', 'sales:read',
+        'products:create', 'products:read', 'products:update',
+        'users:read',
+        'reports:read',
+    ],
+    VENDEDOR: [
+        'sales:create', 'sales:read',
+        'products:read',
+    ],
+} as const
+
+// Helper para verificar permisos
+function hasPermission(role: keyof typeof PERMISSIONS, permission: string): boolean {
+    return PERMISSIONS[role]?.includes(permission as never) ?? false
+}
+
+// Crear servidor
+const fastify = Fastify({
+    logger: {
+        level: 'info',
+        transport: {
+            target: 'pino-pretty',
+            options: { colorize: true },
+        },
+    },
+})
+
+// Registrar plugins
+async function registerPlugins() {
+    await fastify.register(cors, {
+        origin: ['http://localhost:5173', 'http://localhost:3000'],
+        credentials: true,
+    })
+
+    await fastify.register(jwt, {
+        secret: process.env.JWT_SECRET || 'saori-erp-secret-key-2024',
+        sign: { expiresIn: '8h' },
+    })
+}
+
+// Decorator para autenticar
+fastify.decorate('authenticate', async function (request: any, reply: any) {
+    try {
+        await request.jwtVerify()
+    } catch (err) {
+        reply.code(401).send({ error: 'Token inválido o expirado' })
+    }
+})
+
+// Decorator para verificar permisos
+fastify.decorate('requirePermission', function (permission: string) {
+    return async function (request: any, reply: any) {
+        await request.jwtVerify()
+        if (!hasPermission(request.user.role, permission)) {
+            reply.code(403).send({
+                error: 'No tienes permisos para esta acción',
+                required: permission,
+            })
+        }
+    }
+})
+
+// Función para registrar acciones
+async function logAction(
+    userId: string,
+    action: string,
+    entity?: string,
+    entityId?: string,
+    details?: object
+) {
+    await prisma.activityLog.create({
+        data: {
+            userId,
+            action,
+            entity,
+            entityId,
+            details: details ? JSON.stringify(details) : null,
+        },
+    })
+}
+
+// ======== RUTAS DE AUTENTICACIÓN ========
+
+fastify.post('/api/auth/login', async (request, reply) => {
+    const { email, password } = request.body as { email: string; password: string }
+
+    if (!email || !password) {
+        return reply.code(400).send({ error: 'Email y contraseña son requeridos' })
+    }
+
+    const user = await prisma.user.findUnique({
+        where: { email },
+        include: { branch: true },
+    })
+
+    if (!user || !user.active) {
+        return reply.code(401).send({ error: 'Credenciales incorrectas' })
+    }
+
+    const validPassword = await bcrypt.compare(password, user.password)
+    if (!validPassword) {
+        return reply.code(401).send({ error: 'Credenciales incorrectas' })
+    }
+
+    const payload: UserPayload = {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role as UserPayload['role'],
+        branchId: user.branchId,
+    }
+
+    const token = fastify.jwt.sign(payload)
+    const refreshToken = fastify.jwt.sign(payload, { expiresIn: '7d' })
+
+    // Registrar login
+    await logAction(user.id, 'LOGIN', 'User', user.id, {
+        ip: request.ip,
+        userAgent: request.headers['user-agent'],
+    })
+
+    return {
+        user: {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            role: user.role,
+            branchId: user.branchId,
+            branchName: user.branch?.name,
+            permissions: PERMISSIONS[user.role as keyof typeof PERMISSIONS] || [],
+        },
+        token,
+        refreshToken,
+    }
+})
+
+fastify.post('/api/auth/refresh', async (request, reply) => {
+    const { refreshToken } = request.body as { refreshToken: string }
+
+    if (!refreshToken) {
+        return reply.code(400).send({ error: 'Refresh token requerido' })
+    }
+
+    try {
+        const decoded = fastify.jwt.verify<UserPayload>(refreshToken)
+        const user = await prisma.user.findUnique({ where: { id: decoded.id } })
+
+        if (!user || !user.active) {
+            return reply.code(401).send({ error: 'Usuario no encontrado o inactivo' })
+        }
+
+        const payload: UserPayload = {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            role: user.role as UserPayload['role'],
+            branchId: user.branchId,
+        }
+
+        const newToken = fastify.jwt.sign(payload)
+        return { token: newToken }
+    } catch {
+        return reply.code(401).send({ error: 'Refresh token inválido' })
+    }
+})
+
+fastify.get('/api/auth/me', {
+    preHandler: [fastify.authenticate as any],
+}, async (request) => {
+    const user = await prisma.user.findUnique({
+        where: { id: (request.user as UserPayload).id },
+        include: { branch: true },
+    })
+
+    if (!user) {
+        throw { statusCode: 404, message: 'Usuario no encontrado' }
+    }
+
+    return {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        role: user.role,
+        branchId: user.branchId,
+        branchName: user.branch?.name,
+        permissions: PERMISSIONS[user.role as keyof typeof PERMISSIONS] || [],
+    }
+})
+
+// ======== RUTAS DE LOGS (SOLO ADMIN) ========
+
+fastify.get('/api/logs', {
+    preHandler: [fastify.authenticate as any],
+}, async (request, reply) => {
+    const user = request.user as UserPayload
+
+    if (!hasPermission(user.role, 'logs:read')) {
+        return reply.code(403).send({ error: 'No tienes permisos para ver logs' })
+    }
+
+    const { page = 1, limit = 20 } = request.query as { page?: number; limit?: number }
+
+    const logs = await prisma.activityLog.findMany({
+        take: Number(limit),
+        skip: (Number(page) - 1) * Number(limit),
+        orderBy: { createdAt: 'desc' },
+        include: {
+            user: { select: { name: true, email: true } },
+        },
+    })
+
+    const total = await prisma.activityLog.count()
+
+    // Formatear logs para la UI
+    const formattedLogs = logs.map(log => {
+        let message = ''
+        const details = log.details ? JSON.parse(log.details) : {}
+
+        switch (log.action) {
+            case 'LOGIN':
+                message = `${log.user.name} inició sesión`
+                break
+            case 'LOGOUT':
+                message = `${log.user.name} cerró sesión`
+                break
+            case 'CREATE_SALE':
+                message = `${log.user.name} registró venta por $${details.total || 0}`
+                break
+            case 'DELETE_SALE':
+                message = `${log.user.name} canceló ticket #${details.folio || log.entityId}`
+                break
+            case 'UPDATE_PRICE':
+                message = `${log.user.name} cambió precio de ${details.productName}: $${details.oldPrice} → $${details.newPrice}`
+                break
+            case 'CREATE_USER':
+                message = `${log.user.name} creó usuario ${details.userName || ''}`
+                break
+            case 'UPDATE_USER':
+                message = `${log.user.name} modificó usuario ${details.userName || ''}`
+                break
+            case 'DELETE_USER':
+                message = `${log.user.name} eliminó usuario ${details.userName || ''}`
+                break
+            default:
+                message = `${log.user.name} realizó ${log.action}`
+        }
+
+        return {
+            id: log.id,
+            message,
+            action: log.action,
+            entity: log.entity,
+            entityId: log.entityId,
+            userName: log.user.name,
+            createdAt: log.createdAt,
+        }
+    })
+
+    return {
+        logs: formattedLogs,
+        pagination: {
+            page: Number(page),
+            limit: Number(limit),
+            total,
+            totalPages: Math.ceil(total / Number(limit)),
+        },
+    }
+})
+
+// ======== HEALTH CHECK ========
+
+fastify.get('/api/health', async () => {
+    return {
+        status: 'ok',
+        timestamp: new Date().toISOString(),
+        version: '1.0.0',
+    }
+})
+
+// ======== INICIAR SERVIDOR ========
+
+const start = async () => {
+    try {
+        await registerPlugins()
+
+        const host = '0.0.0.0'
+        const port = parseInt(process.env.PORT || '3001')
+
+        await fastify.listen({ port, host })
+        console.log(`\n🚀 Servidor Saori iniciado en http://localhost:${port}`)
+        console.log('📋 Endpoints disponibles:')
+        console.log('   POST /api/auth/login')
+        console.log('   POST /api/auth/refresh')
+        console.log('   GET  /api/auth/me')
+        console.log('   GET  /api/logs (Admin only)')
+        console.log('   GET  /api/health')
+    } catch (err) {
+        fastify.log.error(err)
+        process.exit(1)
+    }
+}
+
+start()
+
+export { fastify, prisma, logAction, hasPermission, PERMISSIONS }

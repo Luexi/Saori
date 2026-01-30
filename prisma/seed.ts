@@ -20,20 +20,35 @@ async function main() {
     })
     console.log('✓ Sucursal creada:', branch.name)
 
-    // Crear usuario admin
-    const hashedPassword = await bcrypt.hash('admin123', 10)
+    // Crear usuario ADMIN
+    const adminPassword = await bcrypt.hash('admin123', 10)
     const admin = await prisma.user.upsert({
         where: { email: 'admin@saori.local' },
         update: {},
         create: {
             email: 'admin@saori.local',
-            password: hashedPassword,
-            name: 'Administrador',
+            password: adminPassword,
+            name: 'Carlos Admin',
             role: 'ADMIN',
             branchId: branch.id,
         },
     })
-    console.log('✓ Usuario admin creado:', admin.email)
+    console.log('✓ Usuario ADMIN creado:', admin.email)
+
+    // Crear usuario EMPLEADO (Vendedor)
+    const empleadoPassword = await bcrypt.hash('empleado123', 10)
+    const empleado = await prisma.user.upsert({
+        where: { email: 'empleado@saori.local' },
+        update: {},
+        create: {
+            email: 'empleado@saori.local',
+            password: empleadoPassword,
+            name: 'María Vendedora',
+            role: 'VENDEDOR',
+            branchId: branch.id,
+        },
+    })
+    console.log('✓ Usuario EMPLEADO creado:', empleado.email)
 
     // Crear categorías de productos
     const categorias = await Promise.all([
@@ -71,7 +86,6 @@ async function main() {
             create: prod,
         })
 
-        // Crear stock inicial
         await prisma.productStock.upsert({
             where: {
                 productId_branchId: {
@@ -90,7 +104,7 @@ async function main() {
     console.log('✓ Productos creados:', productos.length)
 
     // Crear categorías de gastos
-    const expenseCategories = await Promise.all([
+    await Promise.all([
         prisma.expenseCategory.upsert({
             where: { id: 'exp-renta' },
             update: {},
@@ -107,12 +121,45 @@ async function main() {
             create: { id: 'exp-nomina', name: 'Nómina', description: 'Sueldos y salarios' },
         }),
     ])
-    console.log('✓ Categorías de gastos creadas:', expenseCategories.length)
+    console.log('✓ Categorías de gastos creadas')
+
+    // Crear logs de ejemplo
+    await prisma.activityLog.create({
+        data: {
+            userId: admin.id,
+            action: 'LOGIN',
+            entity: 'User',
+            entityId: admin.id,
+            details: JSON.stringify({ ip: '192.168.1.100', browser: 'Chrome' }),
+        },
+    })
+    await prisma.activityLog.create({
+        data: {
+            userId: empleado.id,
+            action: 'CREATE_SALE',
+            entity: 'Sale',
+            entityId: 'sale-demo-001',
+            details: JSON.stringify({ total: 1250, items: 3 }),
+        },
+    })
+    await prisma.activityLog.create({
+        data: {
+            userId: admin.id,
+            action: 'UPDATE_PRICE',
+            entity: 'Product',
+            entityId: 'prod-001',
+            details: JSON.stringify({ oldPrice: 300, newPrice: 350, productName: 'Mouse Inalámbrico' }),
+        },
+    })
+    console.log('✓ Logs de ejemplo creados')
 
     console.log('\n🎉 Seed completado!')
     console.log('\n📋 Credenciales de acceso:')
-    console.log('   Email: admin@saori.local')
-    console.log('   Password: admin123')
+    console.log('   ADMIN:    admin@saori.local / admin123')
+    console.log('   EMPLEADO: empleado@saori.local / empleado123')
+    console.log('\n📌 Permisos:')
+    console.log('   ADMIN: Puede borrar ventas, cambiar precios, modificar usuarios, ver logs')
+    console.log('   EMPLEADO: Solo puede realizar ventas y consultas')
 }
 
 main()

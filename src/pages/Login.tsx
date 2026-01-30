@@ -50,14 +50,30 @@ export default function Login() {
                 <form onSubmit={handleSubmit} className="bg-surface-light dark:bg-surface-dark rounded-2xl shadow-floating p-8">
                     {/* Demo credentials notice */}
                     <div className="mb-6 p-4 bg-primary/5 border border-primary/20 rounded-lg">
-                        <p className="text-xs text-primary dark:text-primary-light font-medium mb-1">
+                        <p className="text-xs text-primary dark:text-primary-light font-medium mb-2">
                             👋 Credenciales de demo:
                         </p>
-                        <p className="text-xs text-text-secondary-light dark:text-text-secondary-dark">
-                            Email: <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded">admin@saori.local</code>
+
+                        {/* Admin */}
+                        <div className="flex items-center gap-2 mb-2">
+                            <span className="text-[10px] bg-primary text-white px-2 py-0.5 rounded-full">Admin</span>
+                            <span className="text-xs text-text-secondary-light dark:text-text-secondary-dark">
+                                Puede borrar ventas, cambiar precios, ver logs
+                            </span>
+                        </div>
+                        <p className="text-xs text-text-secondary-light dark:text-text-secondary-dark ml-4">
+                            <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded">admin@saori.local</code> / <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded">admin123</code>
                         </p>
-                        <p className="text-xs text-text-secondary-light dark:text-text-secondary-dark">
-                            Password: <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded">admin123</code>
+
+                        {/* Empleado */}
+                        <div className="flex items-center gap-2 mt-3 mb-2">
+                            <span className="text-[10px] bg-emerald-500 text-white px-2 py-0.5 rounded-full">Vendedor</span>
+                            <span className="text-xs text-text-secondary-light dark:text-text-secondary-dark">
+                                Solo ventas y consultas
+                            </span>
+                        </div>
+                        <p className="text-xs text-text-secondary-light dark:text-text-secondary-dark ml-4">
+                            <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded">empleado@saori.local</code> / <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded">empleado123</code>
                         </p>
                     </div>
 
