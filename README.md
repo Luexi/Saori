@@ -222,4 +222,14 @@ datasource db {
 
 ## 📝 Licencia
 
-Proyecto privado. Todos los derechos reservados.
+Este proyecto está licenciado bajo la [Licencia MIT](LICENSE).
+
+Copyright (c) 2026 Luis Angel Gonzalez Gonzalez
+
+---
+
+## 👤 Autor
+
+**Luis Angel Gonzalez Gonzalez**
+- Email: luexigonzalez@gmail.com
+- GitHub: [@Luexi](https://github.com/Luexi)
