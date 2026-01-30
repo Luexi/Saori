@@ -35,12 +35,11 @@ export default function Login() {
             <div className="w-full max-w-md">
                 {/* Logo */}
                 <div className="flex flex-col items-center mb-8">
-                    <div className="size-16 rounded-2xl bg-primary flex items-center justify-center text-white shadow-xl shadow-primary/30 mb-4">
-                        <span className="material-symbols-outlined text-[32px]">storefront</span>
-                    </div>
-                    <h1 className="text-3xl font-bold text-text-primary-light dark:text-white">
-                        Saori<span className="font-light opacity-70">ERP</span>
-                    </h1>
+                    <img
+                        src="/assets/logo-full.png"
+                        alt="Saori ERP"
+                        className="h-20 w-auto mb-4 object-contain"
+                    />
                     <p className="text-text-secondary-light dark:text-text-secondary-dark mt-2">
                         Inicia sesión para continuar
                     </p>

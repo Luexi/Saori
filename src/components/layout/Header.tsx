@@ -1,59 +1,70 @@
-import { useAuthStore } from '@/stores/authStore'
 import { useThemeStore } from '@/stores/themeStore'
+import { useAuthStore } from '@/stores/authStore'
 
 export default function Header() {
-    const user = useAuthStore((state) => state.user)
     const { isDark, toggle } = useThemeStore()
+    const user = useAuthStore((state) => state.user)
 
     return (
-        <header className="flex-none px-6 py-6 lg:px-10 border-b border-gray-100 dark:border-gray-800 bg-background-light dark:bg-background-dark">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                {/* Greeting */}
-                <div className="flex flex-col gap-1">
-                    <h2 className="text-2xl lg:text-3xl font-bold tracking-tight text-text-primary-light dark:text-white">
-                        Hola, {user?.name?.split(' ')[0] || 'Usuario'}
-                    </h2>
-                    <p className="text-sm text-text-secondary-light dark:text-text-secondary-dark">
-                        Aquí está lo que sucede con tu negocio hoy.
-                    </p>
-                </div>
+        <header className="flex-none px-6 py-5 lg:px-10 bg-[#F5F7FA] dark:bg-background-dark z-30">
+            <div className="flex items-center justify-between gap-8">
+                {/* Left: Mobile Menu Trigger (Hidden on Desktop) */}
+                <button className="lg:hidden p-2 -ml-2 text-gray-400">
+                    <span className="material-symbols-outlined">menu</span>
+                </button>
 
-                {/* Actions */}
-                <div className="flex items-center gap-3">
-                    {/* Search */}
-                    <div className="relative hidden md:block">
-                        <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-text-secondary-light">
-                            <span className="material-symbols-outlined text-[20px]">search</span>
+                {/* Center/Left: Search Bar (Oripio Style) */}
+                <div className="flex-1 max-w-xl">
+                    <div className="relative group">
+                        <span className="absolute inset-y-0 left-0 flex items-center pl-4 text-gray-400 group-focus-within:text-primary transition-colors">
+                            <span className="material-symbols-outlined text-[22px]">search</span>
                         </span>
                         <input
                             type="text"
                             placeholder="Buscar..."
-                            className="pl-10 pr-4 py-2 text-sm rounded-lg border-0 bg-white dark:bg-surface-dark shadow-sm ring-1 ring-inset ring-gray-200 dark:ring-gray-700 placeholder:text-gray-400 focus:ring-2 focus:ring-inset focus:ring-primary w-64 transition-shadow"
+                            className="w-full bg-white dark:bg-surface-dark pl-11 pr-12 py-3 rounded-full border-none shadow-soft text-sm text-text-primary-light dark:text-white placeholder:text-gray-400/80 focus:ring-2 focus:ring-primary/20 transition-all"
                         />
+                        <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+                            <kbd className="hidden sm:inline-flex items-center gap-1 px-2 py-1 text-xs font-semibold text-gray-400 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+                                <span className="text-xs">⌘</span> K
+                            </kbd>
+                        </div>
                     </div>
+                </div>
 
-                    {/* Date Range */}
-                    <button className="flex items-center gap-2 bg-white dark:bg-surface-dark border border-gray-200 dark:border-gray-700 rounded-lg px-4 py-2 text-sm font-medium text-text-primary-light dark:text-white shadow-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors">
-                        <span className="material-symbols-outlined text-[18px]">calendar_today</span>
-                        <span className="hidden sm:inline">Hoy</span>
-                        <span className="material-symbols-outlined text-[18px] text-gray-400">expand_more</span>
+                {/* Right: Actions */}
+                <div className="flex items-center gap-3 sm:gap-4">
+                    <button className="p-2.5 bg-white dark:bg-surface-dark rounded-full text-gray-400 hover:text-primary hover:shadow-md transition-all shadow-sm">
+                        <span className="material-symbols-outlined text-[20px] block">help</span>
                     </button>
 
-                    {/* Theme Toggle */}
+                    <button className="p-2.5 bg-white dark:bg-surface-dark rounded-full text-gray-400 hover:text-primary hover:shadow-md transition-all shadow-sm relative">
+                        <span className="material-symbols-outlined text-[20px] block">mail</span>
+                        <span className="absolute top-2 right-2 w-2 h-2 bg-red-400 rounded-full border border-white dark:border-surface-dark" />
+                    </button>
+
+                    <button className="p-2.5 bg-white dark:bg-surface-dark rounded-full text-gray-400 hover:text-primary hover:shadow-md transition-all shadow-sm relative">
+                        <span className="material-symbols-outlined text-[20px] block">notifications</span>
+                        <span className="absolute top-2 right-2.5 w-2 h-2 bg-primary rounded-full border border-white dark:border-surface-dark" />
+                    </button>
+
                     <button
                         onClick={toggle}
-                        className="flex items-center justify-center bg-white dark:bg-surface-dark border border-gray-200 dark:border-gray-700 rounded-lg size-10 shadow-sm hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors"
-                        title={isDark ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+                        className="p-2.5 bg-white dark:bg-surface-dark rounded-full text-gray-400 hover:text-primary hover:shadow-md transition-all shadow-sm"
                     >
-                        <span className="material-symbols-outlined text-[20px] text-text-secondary-light dark:text-text-secondary-dark">
+                        <span className="material-symbols-outlined text-[20px] block">
                             {isDark ? 'light_mode' : 'dark_mode'}
                         </span>
                     </button>
 
-                    {/* Quick Add */}
-                    <button className="flex items-center justify-center bg-primary text-white rounded-lg size-10 shadow-lg shadow-primary/30 hover:bg-primary-dark transition-colors">
-                        <span className="material-symbols-outlined text-[20px]">add</span>
-                    </button>
+                    {/* User Avatar Tiny */}
+                    <div className="ml-2 pl-4 border-l border-gray-200 dark:border-gray-700 hidden sm:flex items-center gap-3">
+                        <div className="size-10 rounded-full bg-white p-0.5 shadow-sm overflow-hidden cursor-pointer">
+                            <div className="w-full h-full rounded-full bg-gradient-to-tr from-primary to-emerald-300 flex items-center justify-center text-white font-bold text-sm">
+                                {user?.name?.substring(0, 2).toUpperCase() || 'US'}
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </header>

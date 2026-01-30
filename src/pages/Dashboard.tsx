@@ -8,6 +8,7 @@ import {
     Area,
     AreaChart
 } from 'recharts'
+import { useAuthStore } from '@/stores/authStore'
 
 // Mock data
 const salesData = [
@@ -90,8 +91,32 @@ const recentActivity = [
 ]
 
 export default function Dashboard() {
+    const user = useAuthStore((state) => state.user)
+
     return (
         <div className="flex flex-col gap-8">
+            {/* Oripio Style Header */}
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
+                <div>
+                    <h1 className="text-3xl font-bold text-text-primary-light dark:text-white mb-2 tracking-tight">
+                        Welcome back, {user?.name?.split(' ')[0] || 'Admin'}
+                    </h1>
+                    <p className="text-gray-500 dark:text-gray-400 font-medium">
+                        Monitor and control what happens with your money today.
+                    </p>
+                </div>
+                <div className="flex items-center gap-3">
+                    <button className="flex items-center gap-2 px-5 py-2.5 bg-white dark:bg-surface-dark rounded-full shadow-soft hover:shadow-md transition-all text-sm font-semibold text-gray-600 dark:text-gray-300">
+                        <span className="material-symbols-outlined text-[20px]">calendar_today</span>
+                        <span>{new Date().toLocaleDateString('es-MX', { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                    </button>
+                    <button className="flex items-center gap-2 px-6 py-2.5 bg-[#1F2937] dark:bg-white text-white dark:text-black rounded-full shadow-lg hover:shadow-xl hover:-translate-y-0.5 transition-all font-bold text-sm">
+                        <span className="material-symbols-outlined text-[20px]">download</span>
+                        <span>Export</span>
+                    </button>
+                </div>
+            </div>
+
             {/* Metrics Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
                 {metrics.map((metric) => (
@@ -102,61 +127,66 @@ export default function Dashboard() {
             {/* Main Content */}
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
                 {/* Chart */}
-                <div className="xl:col-span-2 bg-surface-light dark:bg-surface-dark rounded-xl shadow-floating border border-gray-100 dark:border-gray-800">
-                    <div className="p-6 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center">
+                <div className="xl:col-span-2 bg-white dark:bg-surface-dark rounded-[24px] shadow-soft border border-gray-100/50 dark:border-gray-700/50 hover:shadow-floating transition-all duration-300">
+                    <div className="p-8 border-b border-gray-100/50 dark:border-gray-800/50 flex justify-between items-center">
                         <div>
-                            <h3 className="text-lg font-bold text-text-primary-light dark:text-white">
+                            <h3 className="text-xl font-bold text-text-primary-light dark:text-white">
                                 Resumen de Ventas
                             </h3>
-                            <p className="text-sm text-text-secondary-light dark:text-text-secondary-dark mt-1 flex items-center gap-2">
-                                <span className="text-emerald-600 dark:text-emerald-400 font-medium">+8%</span>
-                                vs mes anterior
-                            </p>
+                            <div className="flex items-center gap-3 mt-2">
+                                <h2 className="text-3xl font-bold text-text-primary-light dark:text-white">$84,849.93</h2>
+                                <span className="bg-emerald-100 text-emerald-700 px-2 py-1 rounded-lg text-xs font-bold">+2.1%</span>
+                            </div>
                         </div>
-                        <div className="flex gap-2">
-                            <button className="px-3 py-1.5 text-xs font-medium rounded-md bg-primary text-white">
-                                Mensual
+                        <div className="flex bg-gray-50 dark:bg-gray-800/50 p-1 rounded-xl">
+                            <button className="px-4 py-2 text-xs font-bold rounded-lg bg-white dark:bg-surface-dark shadow-sm text-text-primary-light dark:text-white">
+                                Monthly
                             </button>
-                            <button className="px-3 py-1.5 text-xs font-medium rounded-md text-text-secondary-light hover:bg-gray-100 dark:text-text-secondary-dark dark:hover:bg-gray-800">
-                                Trimestral
+                            <button className="px-4 py-2 text-xs font-bold rounded-lg text-gray-400 hover:text-gray-600 dark:hover:text-gray-300">
+                                Weekly
                             </button>
                         </div>
                     </div>
-                    <div className="p-6 h-[350px]">
+                    <div className="p-8 h-[380px]">
                         <ResponsiveContainer width="100%" height="100%">
                             <AreaChart data={salesData}>
                                 <defs>
                                     <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#295570" stopOpacity={0.15} />
-                                        <stop offset="95%" stopColor="#295570" stopOpacity={0} />
+                                        <stop offset="5%" stopColor="#10B981" stopOpacity={0.2} />
+                                        <stop offset="95%" stopColor="#10B981" stopOpacity={0} />
                                     </linearGradient>
                                 </defs>
                                 <XAxis
                                     dataKey="month"
                                     axisLine={false}
                                     tickLine={false}
-                                    tick={{ fill: '#6b7880', fontSize: 12 }}
+                                    tick={{ fill: '#9CA3AF', fontSize: 13, fontWeight: 500 }}
+                                    dy={10}
                                 />
                                 <YAxis
                                     axisLine={false}
                                     tickLine={false}
-                                    tick={{ fill: '#6b7880', fontSize: 12 }}
+                                    tick={{ fill: '#9CA3AF', fontSize: 13, fontWeight: 500 }}
                                     tickFormatter={(value) => `$${value / 1000}k`}
+                                    dx={-10}
                                 />
                                 <Tooltip
                                     contentStyle={{
-                                        backgroundColor: '#2d3339',
+                                        backgroundColor: '#1F2937',
                                         border: 'none',
-                                        borderRadius: '8px',
+                                        borderRadius: '12px',
                                         color: '#fff',
+                                        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+                                        padding: '12px 16px'
                                     }}
+                                    itemStyle={{ color: '#fff', fontWeight: 600 }}
                                     formatter={(value: number) => [`$${value.toLocaleString()}`, 'Ventas']}
                                 />
                                 <Area
                                     type="monotone"
                                     dataKey="value"
-                                    stroke="#295570"
-                                    strokeWidth={3}
+                                    stroke="#10B981"
+                                    strokeWidth={4}
                                     fillOpacity={1}
                                     fill="url(#colorValue)"
                                 />
@@ -166,16 +196,16 @@ export default function Dashboard() {
                 </div>
 
                 {/* Activity Feed */}
-                <div className="bg-surface-light dark:bg-surface-dark rounded-xl shadow-floating border border-gray-100 dark:border-gray-800 flex flex-col max-h-[500px]">
-                    <div className="p-6 border-b border-gray-100 dark:border-gray-800 flex justify-between items-center">
-                        <h3 className="text-lg font-bold text-text-primary-light dark:text-white">
+                <div className="bg-white dark:bg-surface-dark rounded-[24px] shadow-soft border border-gray-100/50 dark:border-gray-700/50 flex flex-col max-h-[550px]">
+                    <div className="p-8 border-b border-gray-100/50 dark:border-gray-800/50 flex justify-between items-center">
+                        <h3 className="text-xl font-bold text-text-primary-light dark:text-white">
                             Actividad Reciente
                         </h3>
-                        <button className="text-primary hover:text-primary-dark text-sm font-medium">
-                            Ver todo
+                        <button className="text-gray-400 hover:text-primary transition-colors">
+                            <span className="material-symbols-outlined">more_horiz</span>
                         </button>
                     </div>
-                    <div className="flex-1 overflow-y-auto p-6">
+                    <div className="flex-1 overflow-y-auto p-8">
                         <div className="relative pl-2">
                             {/* Timeline line */}
                             <div className="absolute left-[19px] top-2 bottom-6 w-[2px] bg-gray-100 dark:bg-gray-800" />
@@ -195,7 +225,7 @@ export default function Dashboard() {
     )
 }
 
-// Metric Card Component
+// Metric Card Component Updated (Oripio Style)
 function MetricCard({
     title,
     value,
@@ -209,41 +239,51 @@ function MetricCard({
     changeType: 'positive' | 'negative' | 'neutral'
     icon: string
 }) {
-    const changeColors = {
-        positive: 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400',
-        negative: 'bg-red-50 dark:bg-red-900/30 text-red-700 dark:text-red-400',
-        neutral: 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400',
+    // Colores más sutiles y "pasteles" para Oripio
+    const iconContainerColors = {
+        positive: 'bg-emerald-50 text-emerald-600',
+        negative: 'bg-rose-50 text-rose-600',
+        neutral: 'bg-indigo-50 text-indigo-600',
     }
 
-    const changeIcons = {
+    const trendColors = {
+        positive: 'text-emerald-500 bg-emerald-50',
+        negative: 'text-rose-500 bg-rose-50',
+        neutral: 'text-gray-500 bg-gray-50',
+    }
+
+    const trendIcons = {
         positive: 'trending_up',
         negative: 'trending_down',
         neutral: 'remove',
     }
 
     return (
-        <div className="bg-surface-light dark:bg-surface-dark rounded-xl p-6 shadow-floating hover:-translate-y-1 transition-transform duration-300 border border-gray-100 dark:border-gray-800">
-            <div className="flex justify-between items-start mb-4">
-                <div>
-                    <p className="text-sm font-medium text-text-secondary-light dark:text-text-secondary-dark">
-                        {title}
-                    </p>
-                    <h3 className="text-3xl font-bold text-text-primary-light dark:text-white mt-1">
-                        {value}
-                    </h3>
+        <div className="bg-white dark:bg-surface-dark rounded-[24px] p-7 shadow-soft hover:shadow-floating transition-all duration-300 border border-gray-100/50 dark:border-gray-700/50 group">
+            <div className="flex justify-between items-start mb-6">
+                <div className={`size-12 rounded-2xl flex items-center justify-center ${iconContainerColors[changeType] || 'bg-gray-50 text-gray-600'} transition-transform group-hover:scale-110`}>
+                    <span className="material-symbols-outlined text-[24px]">{icon}</span>
                 </div>
-                <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold ${changeColors[changeType]}`}>
-                    <span className="material-symbols-outlined text-[14px]">
-                        {changeIcons[changeType]}
+                <div className="flex items-center gap-1">
+                    <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-bold ${trendColors[changeType]}`}>
+                        <span className="material-symbols-outlined text-[14px]">
+                            {trendIcons[changeType]}
+                        </span>
+                        {Math.abs(change)}%
                     </span>
-                    {Math.abs(change)}%
-                </span>
+                    <button className="text-gray-300 hover:text-gray-500">
+                        <span className="material-symbols-outlined text-[20px]">more_horiz</span>
+                    </button>
+                </div>
             </div>
-            <div className="flex items-center gap-2 text-primary dark:text-primary-light">
-                <span className="material-symbols-outlined text-[20px]">{icon}</span>
-                <span className="text-xs text-text-secondary-light dark:text-text-secondary-dark">
-                    vs período anterior
-                </span>
+
+            <div>
+                <p className="text-sm font-semibold text-gray-400 dark:text-gray-500 mb-1">
+                    {title}
+                </p>
+                <h3 className="text-3xl font-bold text-text-primary-light dark:text-white tracking-tight">
+                    {value}
+                </h3>
             </div>
         </div>
     )

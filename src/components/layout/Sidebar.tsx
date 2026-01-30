@@ -27,17 +27,6 @@ const navItems: NavItem[] = [
     { icon: 'local_shipping', label: 'Proveedores', path: '/proveedores' },
 ]
 
-const proximamenteItems: NavItem[] = [
-    { icon: 'receipt_long', label: 'Facturación', path: '/facturacion' },
-    { icon: 'badge', label: 'Nómina', path: '/nomina' },
-    { icon: 'account_balance', label: 'Contabilidad', path: '/contabilidad' },
-]
-
-// Items que requieren permisos especiales
-const adminOnlyItems: NavItem[] = [
-    { icon: 'history', label: 'Registro Actividad', path: '/logs' },
-]
-
 const bottomItems: NavItem[] = [
     { icon: 'manage_accounts', label: 'Usuarios', path: '/usuarios' },
     { icon: 'settings', label: 'Configuración', path: '/configuracion' },
@@ -48,124 +37,126 @@ export default function Sidebar() {
     const logout = useAuthStore((state) => state.logout)
     const isAdmin = useAuthStore((state) => state.isAdmin)
 
+    // Filtrar items según rol
+    const visibleNavItems = navItems.filter(item => {
+        // Finanzas, Personal y Logs solo para Admin
+        if (item.path === '/finanzas' || item.path === '/personal' || item.path === '/logs') {
+            return isAdmin()
+        }
+        return true
+    })
+
     return (
-        <aside className="flex w-[80px] lg:w-[260px] flex-col border-r border-gray-200 dark:border-gray-800 bg-surface-light dark:bg-surface-dark transition-all duration-300">
+        <aside className="flex w-[80px] lg:w-[280px] flex-col bg-surface-light dark:bg-surface-dark transition-all duration-300 shadow-sm z-50">
             {/* Logo */}
-            <div className="flex h-20 items-center justify-center lg:justify-start px-0 lg:px-6 border-b border-gray-100 dark:border-gray-800/50">
-                <div className="flex items-center gap-3">
-                    <div className="size-10 rounded-xl bg-primary flex items-center justify-center text-white shadow-lg shadow-primary/30">
-                        <span className="material-symbols-outlined text-[24px]">storefront</span>
-                    </div>
-                    <span className="text-xl font-bold tracking-tight text-primary dark:text-white hidden lg:block">
-                        Saori<span className="font-light opacity-70">ERP</span>
-                    </span>
+            <div className="h-[80px] flex items-center justify-center lg:justify-start px-2 lg:px-6 border-b border-gray-100 dark:border-gray-800">
+                <div className="flex items-center gap-3 w-full justify-center lg:justify-start">
+                    <img
+                        src="/assets/logo-icon.png"
+                        alt="Saori"
+                        className="size-10 object-contain lg:hidden"
+                    />
+                    <img
+                        src="/assets/logo-full.png"
+                        alt="Saori ERP"
+                        className="h-16 w-auto hidden lg:block object-contain"
+                    />
                 </div>
             </div>
 
             {/* Navigation */}
-            <div className="flex flex-1 flex-col justify-between py-6 px-3 overflow-y-auto">
-                <nav className="flex flex-col gap-1">
-                    {/* Main Navigation */}
-                    {navItems.map((item) => (
+            <div className="flex flex-1 flex-col justify-between py-2 px-4 overflow-y-auto scrollbar-hide">
+                <nav className="flex flex-col gap-1.5">
+                    <p className="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 hidden lg:block">
+                        Menu Principal
+                    </p>
+                    {visibleNavItems.map((item) => (
                         <NavLink
                             key={item.path}
                             to={item.path}
                             className={({ isActive }) =>
-                                `group flex items-center gap-3 rounded-lg px-3 py-3 transition-colors ${isActive
-                                    ? 'bg-primary/10 text-primary dark:text-white'
-                                    : 'text-text-secondary-light hover:bg-gray-100 dark:text-text-secondary-dark dark:hover:bg-gray-800'
+                                `group flex items-center gap-3 rounded-full px-4 py-3.5 transition-all duration-200 ${isActive
+                                    ? 'bg-primary text-white shadow-lg shadow-primary/25 font-semibold translate-x-1'
+                                    : 'text-text-secondary-light hover:bg-gray-50 dark:text-text-secondary-dark dark:hover:bg-gray-800 hover:text-primary transition-colors'
                                 }`
                             }
                         >
                             {({ isActive }) => (
                                 <>
-                                    <span className={`material-symbols-outlined ${isActive ? 'filled' : ''}`}>
-                                        {item.icon}
+                                    <span className={`material-symbols-outlined text-[22px] transition-transform ${isActive ? '' : 'group-hover:scale-110'}`}>
+                                        {item.filled && isActive ? item.icon : item.icon}
                                     </span>
-                                    <span className="text-sm font-medium hidden lg:block">{item.label}</span>
+                                    <span className="hidden lg:block text-[15px]">{item.label}</span>
+                                    {isActive && (
+                                        <span className="ml-auto w-1.5 h-1.5 rounded-full bg-white hidden lg:block" />
+                                    )}
                                 </>
                             )}
                         </NavLink>
                     ))}
 
-                    {/* Divider */}
-                    <div className="my-4 border-t border-gray-100 dark:border-gray-800" />
+                    <div className="my-4 border-t border-gray-100 dark:border-gray-800 lg:mx-4" />
 
-                    {/* Próximamente */}
-                    <p className="px-3 text-xs font-semibold text-text-secondary-light dark:text-text-secondary-dark uppercase tracking-wider mb-2 hidden lg:block">
-                        Próximamente
+                    <p className="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mb-2 hidden lg:block">
+                        General
                     </p>
-                    {proximamenteItems.map((item) => (
-                        <NavLink
-                            key={item.path}
-                            to={item.path}
-                            className="group flex items-center gap-3 rounded-lg px-3 py-3 text-text-secondary-light/50 hover:bg-gray-100 dark:text-text-secondary-dark/50 dark:hover:bg-gray-800 transition-colors"
-                        >
-                            <span className="material-symbols-outlined">{item.icon}</span>
-                            <span className="text-sm font-medium hidden lg:block">{item.label}</span>
-                            <span className="ml-auto text-[10px] bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 px-2 py-0.5 rounded-full hidden lg:block">
-                                Pronto
-                            </span>
-                        </NavLink>
-                    ))}
-
-                    {/* Divider */}
-                    <div className="my-4 border-t border-gray-100 dark:border-gray-800" />
-
-                    {/* Admin Only - Logs */}
-                    {isAdmin() && adminOnlyItems.map((item) => (
-                        <NavLink
-                            key={item.path}
-                            to={item.path}
-                            className={({ isActive }) =>
-                                `group flex items-center gap-3 rounded-lg px-3 py-3 transition-colors ${isActive
-                                    ? 'bg-primary/10 text-primary dark:text-white'
-                                    : 'text-text-secondary-light hover:bg-gray-100 dark:text-text-secondary-dark dark:hover:bg-gray-800'
-                                }`
-                            }
-                        >
-                            <span className="material-symbols-outlined">{item.icon}</span>
-                            <span className="text-sm font-medium hidden lg:block">{item.label}</span>
-                            <span className="ml-auto text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full hidden lg:block">
-                                Admin
-                            </span>
-                        </NavLink>
-                    ))}
-
-                    {/* Bottom Items */}
                     {bottomItems.map((item) => (
                         <NavLink
                             key={item.path}
                             to={item.path}
                             className={({ isActive }) =>
-                                `group flex items-center gap-3 rounded-lg px-3 py-3 transition-colors ${isActive
-                                    ? 'bg-primary/10 text-primary dark:text-white'
-                                    : 'text-text-secondary-light hover:bg-gray-100 dark:text-text-secondary-dark dark:hover:bg-gray-800'
+                                `group flex items-center gap-3 rounded-full px-4 py-3.5 transition-all duration-200 ${isActive
+                                    ? 'bg-primary text-white shadow-lg shadow-primary/25 font-semibold'
+                                    : 'text-text-secondary-light hover:bg-gray-50 dark:text-text-secondary-dark dark:hover:bg-gray-800 hover:text-primary'
                                 }`
                             }
                         >
-                            <span className="material-symbols-outlined">{item.icon}</span>
-                            <span className="text-sm font-medium hidden lg:block">{item.label}</span>
+                            <span className="material-symbols-outlined text-[22px]">{item.icon}</span>
+                            <span className="hidden lg:block text-[15px]">{item.label}</span>
                         </NavLink>
                     ))}
                 </nav>
 
-                {/* User Profile */}
-                <div className="flex items-center gap-3 px-1 lg:px-2 pt-4 border-t border-gray-100 dark:border-gray-800">
-                    <div className="size-10 rounded-full bg-primary/10 flex items-center justify-center text-primary dark:text-white font-semibold">
+                {/* Support Card (Visual Only - Oripio style) */}
+                <div className="mt-6 mb-2 hidden lg:block">
+                    <div className="bg-gradient-to-br from-primary to-primary-dark rounded-3xl p-5 text-white shadow-xl shadow-primary/20 relative overflow-hidden group cursor-pointer">
+                        {/* Decorative circles */}
+                        <div className="absolute top-0 right-0 -mt-2 -mr-2 w-16 h-16 bg-white/10 rounded-full blur-xl group-hover:bg-white/20 transition-all" />
+                        <div className="absolute bottom-0 left-0 -mb-4 -ml-4 w-20 h-20 bg-black/5 rounded-full blur-xl" />
+
+                        <div className="relative z-10">
+                            <div className="size-10 bg-white/20 rounded-xl flex items-center justify-center mb-3 backdrop-blur-sm">
+                                <span className="material-symbols-outlined text-white">support_agent</span>
+                            </div>
+                            <h4 className="font-bold text-lg mb-1">¿Necesitas Ayuda?</h4>
+                            <p className="text-white/80 text-xs mb-4 leading-relaxed">
+                                Contacta a soporte técnico si tienes problemas.
+                            </p>
+                            <button className="w-full bg-white text-primary font-bold py-2.5 rounded-xl shadow-sm hover:shadow-md hover:bg-gray-50 transition-all text-sm">
+                                Contactar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* User Profile */}
+            <div className="p-4 border-t border-gray-100 dark:border-gray-800">
+                <div className="flex items-center gap-3 p-2 rounded-2xl hover:bg-gray-50 dark:hover:bg-gray-800 cursor-pointer transition-colors group">
+                    <div className="size-10 rounded-full bg-gradient-to-tr from-primary to-primary-light text-white flex items-center justify-center font-bold text-lg shadow-md group-hover:scale-105 transition-transform">
                         {user?.name?.charAt(0) || 'U'}
                     </div>
-                    <div className="flex flex-col overflow-hidden hidden lg:flex">
-                        <h1 className="text-sm font-semibold truncate text-text-primary-light dark:text-white">
+                    <div className="hidden lg:block flex-1 min-w-0">
+                        <p className="text-sm font-bold text-text-primary-light dark:text-white truncate">
                             {user?.name || 'Usuario'}
-                        </h1>
+                        </p>
                         <p className="text-xs text-text-secondary-light dark:text-text-secondary-dark truncate">
-                            {user?.role ? roleLabels[user.role] || user.role : 'Rol'}
+                            {user?.role ? roleLabels[user.role] : 'Sin rol'}
                         </p>
                     </div>
                     <button
                         onClick={logout}
-                        className="ml-auto text-text-secondary-light hover:text-red-500 dark:text-text-secondary-dark dark:hover:text-red-400 hidden lg:block"
+                        className="hidden lg:block p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-full transition-all"
                         title="Cerrar sesión"
                     >
                         <span className="material-symbols-outlined text-[20px]">logout</span>

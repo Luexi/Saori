@@ -22,6 +22,21 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
     return <>{children}</>
 }
 
+function AdminRoute({ children }: { children: React.ReactNode }) {
+    const isAuthenticated = useAuthStore((state) => state.isAuthenticated)
+    const isAdmin = useAuthStore((state) => state.isAdmin)
+
+    if (!isAuthenticated) {
+        return <Navigate to="/login" replace />
+    }
+
+    if (!isAdmin()) {
+        return <Navigate to="/" replace />
+    }
+
+    return <>{children}</>
+}
+
 function App() {
     return (
         <BrowserRouter>
@@ -42,12 +57,12 @@ function App() {
                     <Route path="pos" element={<POS />} />
                     <Route path="clientes" element={<Clientes />} />
                     <Route path="productos" element={<Inventario />} />
-                    <Route path="finanzas" element={<Finanzas />} />
-                    <Route path="personal" element={<Personal />} />
+                    <Route path="finanzas" element={<AdminRoute><Finanzas /></AdminRoute>} />
+                    <Route path="personal" element={<AdminRoute><Personal /></AdminRoute>} />
                     <Route path="reportes" element={<Reportes />} />
                     <Route path="proveedores" element={<Proximamente titulo="Proveedores" />} />
                     <Route path="usuarios" element={<Proximamente titulo="Usuarios" />} />
-                    <Route path="logs" element={<Logs />} />
+                    <Route path="logs" element={<AdminRoute><Logs /></AdminRoute>} />
                     <Route path="facturacion" element={<Proximamente titulo="Facturación Electrónica" proximamente />} />
                     <Route path="nomina" element={<Proximamente titulo="Nómina" proximamente />} />
                     <Route path="contabilidad" element={<Proximamente titulo="Contabilidad" proximamente />} />

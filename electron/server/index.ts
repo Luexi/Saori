@@ -221,6 +221,162 @@ fastify.get('/api/auth/me', {
     }
 })
 
+// ======== RUTAS DE USUARIOS ========
+
+// GET Users
+fastify.get('/api/users', {
+    preHandler: [fastify.authenticate as any],
+}, async (request, reply) => {
+    const user = request.user as UserPayload
+
+    if (!hasPermission(user.role, 'users:read')) {
+        return reply.code(403).send({ error: 'No tienes permisos para ver usuarios' })
+    }
+
+    const { search } = request.query as { search?: string }
+
+    const users = await prisma.user.findMany({
+        where: {
+            active: true,
+            AND: [
+                search ? {
+                    OR: [
+                        { name: { contains: search } },
+                        { email: { contains: search } },
+                    ]
+                } : {},
+            ],
+        },
+        include: { branch: true },
+        orderBy: { name: 'asc' },
+    })
+
+    return users.map(u => ({
+        id: u.id,
+        email: u.email,
+        name: u.name,
+        role: u.role,
+        branchName: u.branch?.name,
+        active: u.active,
+        createdAt: u.createdAt,
+    }))
+})
+
+// POST User
+fastify.post('/api/users', {
+    preHandler: [fastify.authenticate as any],
+}, async (request, reply) => {
+    const user = request.user as UserPayload
+
+    if (!hasPermission(user.role, 'users:create')) {
+        return reply.code(403).send({ error: 'No tienes permisos para crear usuarios' })
+    }
+
+    const { name, email, password, role, branchId } = request.body as {
+        name: string
+        email: string
+        password: string
+        role: string
+        branchId?: string
+    }
+
+    if (!name || !email || !password || !role) {
+        return reply.code(400).send({ error: 'Todos los campos son requeridos' })
+    }
+
+    // Verificar email
+    const existing = await prisma.user.findUnique({ where: { email } })
+    if (existing) {
+        return reply.code(400).send({ error: 'El email ya está registrado' })
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10)
+
+    const newUser = await prisma.user.create({
+        data: {
+            name,
+            email,
+            password: hashedPassword,
+            role,
+            branchId: branchId || null,
+        },
+    })
+
+    await logAction(user.id, 'CREATE_USER', 'User', newUser.id, { name, role })
+
+    return {
+        id: newUser.id,
+        name: newUser.name,
+        email: newUser.email,
+        role: newUser.role,
+    }
+})
+
+// PUT User
+fastify.put('/api/users/:id', {
+    preHandler: [fastify.authenticate as any],
+}, async (request, reply) => {
+    const user = request.user as UserPayload
+
+    if (!hasPermission(user.role, 'users:update')) {
+        return reply.code(403).send({ error: 'No tienes permisos para editar usuarios' })
+    }
+
+    const { id } = request.params as { id: string }
+    const { name, email, password, role, branchId, active } = request.body as {
+        name?: string
+        email?: string
+        password?: string
+        role?: string
+        branchId?: string | null
+        active?: boolean
+    }
+
+    // Si cambia password
+    let hashedPassword
+    if (password) {
+        hashedPassword = await bcrypt.hash(password, 10)
+    }
+
+    const updatedUser = await prisma.user.update({
+        where: { id },
+        data: {
+            ...(name && { name }),
+            ...(email && { email }),
+            ...(hashedPassword && { password: hashedPassword }),
+            ...(role && { role }),
+            ...(branchId !== undefined && { branchId }),
+            ...(active !== undefined && { active }),
+        },
+    })
+
+    await logAction(user.id, 'UPDATE_USER', 'User', updatedUser.id, { name: updatedUser.name })
+
+    return { success: true }
+})
+
+// DELETE User
+fastify.delete('/api/users/:id', {
+    preHandler: [fastify.authenticate as any],
+}, async (request, reply) => {
+    const user = request.user as UserPayload
+
+    if (!hasPermission(user.role, 'users:delete')) {
+        return reply.code(403).send({ error: 'No tienes permisos para eliminar usuarios' })
+    }
+
+    const { id } = request.params as { id: string }
+
+    await prisma.user.update({
+        where: { id },
+        data: { active: false },
+    })
+
+    await logAction(user.id, 'DELETE_USER', 'User', id, {})
+
+    return { success: true }
+})
+
 // ======== RUTAS DE LOGS (SOLO ADMIN) ========
 
 fastify.get('/api/logs', {
@@ -450,6 +606,53 @@ fastify.delete('/api/products/:id', {
 })
 
 // ======== RUTAS DE VENTAS ========
+
+fastify.get('/api/sales/daily', {
+    preHandler: [fastify.authenticate as any],
+}, async (request, reply) => {
+    const user = request.user as UserPayload
+
+    // Get today's range
+    const start = new Date()
+    start.setHours(0, 0, 0, 0)
+    const end = new Date()
+    end.setHours(23, 59, 59, 999)
+
+    const sales = await prisma.sale.findMany({
+        where: {
+            userId: user.id,
+            createdAt: {
+                gte: start,
+                lte: end,
+            },
+            status: { not: 'CANCELLED' }
+        },
+        include: {
+            items: true,
+            customer: true,
+        },
+        orderBy: { createdAt: 'desc' },
+    })
+
+    const total = sales.reduce((sum, s) => sum + s.total, 0)
+    const count = sales.length
+
+    return {
+        sales: sales.map(s => ({
+            id: s.id,
+            folio: s.folio,
+            total: s.total,
+            itemsCount: s.items.length,
+            customerName: s.customer?.name || 'Público en General',
+            createdAt: s.createdAt,
+        })),
+        summary: {
+            total,
+            count,
+            date: start.toISOString(),
+        }
+    }
+})
 
 fastify.post('/api/sales', {
     preHandler: [fastify.authenticate as any],

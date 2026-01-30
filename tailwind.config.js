@@ -8,10 +8,10 @@ export default {
     theme: {
         extend: {
             colors: {
-                // Colores del mockup Saori
-                "primary": "#295570",
-                "primary-light": "#3a7a9e",
-                "primary-dark": "#1e3f54",
+                // Colores Oripio Theme (Verde Moderno)
+                "primary": "#10B981", // Emerald 500
+                "primary-light": "#34D399", // Emerald 400
+                "primary-dark": "#059669", // Emerald 600
 
                 // Backgrounds
                 "background-light": "#f9fafb",
@@ -31,8 +31,8 @@ export default {
                 "display": ["Manrope", "system-ui", "sans-serif"],
             },
             boxShadow: {
-                "floating": "0px 4px 16px rgba(0, 0, 0, 0.08)",
-                "soft": "0 2px 8px rgba(0,0,0,0.04)",
+                "floating": "0px 10px 30px rgba(0, 0, 0, 0.04)",
+                "soft": "0 4px 12px rgba(0,0,0,0.02)",
             },
         },
     },
