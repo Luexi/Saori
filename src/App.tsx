@@ -5,6 +5,7 @@ import Login from '@/pages/Login'
 import Dashboard from '@/pages/Dashboard'
 import POS from '@/pages/POS'
 import Inventario from '@/pages/Inventario'
+import Clientes from '@/pages/Clientes'
 import Logs from '@/pages/Logs'
 import Proximamente from '@/pages/Proximamente'
 
@@ -36,7 +37,7 @@ function App() {
                     <Route index element={<Dashboard />} />
                     <Route path="ventas" element={<Proximamente titulo="Historial Ventas" />} />
                     <Route path="pos" element={<POS />} />
-                    <Route path="clientes" element={<Proximamente titulo="CRM - Clientes" />} />
+                    <Route path="clientes" element={<Clientes />} />
                     <Route path="productos" element={<Inventario />} />
                     <Route path="finanzas" element={<Proximamente titulo="Finanzas" />} />
                     <Route path="reportes" element={<Proximamente titulo="Reportes" />} />

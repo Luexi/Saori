@@ -569,6 +569,150 @@ fastify.post('/api/sales', {
     }
 })
 
+// ======== RUTAS DE CLIENTES ========
+
+fastify.get('/api/customers', {
+    preHandler: [fastify.authenticate as any],
+}, async (request, reply) => {
+    const user = request.user as UserPayload
+
+    if (!hasPermission(user.role, 'customers:read')) {
+        return reply.code(403).send({ error: 'No tienes permisos para ver clientes' })
+    }
+
+    const { search } = request.query as { search?: string }
+
+    const customers = await prisma.customer.findMany({
+        where: search ? {
+            OR: [
+                { name: { contains: search } },
+                { email: { contains: search } },
+                { phone: { contains: search } },
+            ],
+        } : undefined,
+        include: {
+            _count: { select: { sales: true } },
+            sales: {
+                select: { total: true, createdAt: true },
+                orderBy: { createdAt: 'desc' },
+                take: 1,
+            },
+        },
+        orderBy: { name: 'asc' },
+    })
+
+    return customers.map(c => ({
+        id: c.id,
+        name: c.name,
+        email: c.email,
+        phone: c.phone,
+        address: c.address,
+        rfc: c.rfc,
+        tags: c.tags ? JSON.parse(c.tags) : [],
+        notes: c.notes,
+        totalOrders: c._count.sales,
+        lastPurchase: c.sales[0]?.createdAt || null,
+    }))
+})
+
+fastify.post('/api/customers', {
+    preHandler: [fastify.authenticate as any],
+}, async (request, reply) => {
+    const user = request.user as UserPayload
+
+    if (!hasPermission(user.role, 'customers:create')) {
+        return reply.code(403).send({ error: 'No tienes permisos para crear clientes' })
+    }
+
+    const { name, email, phone, address, rfc, tags, notes } = request.body as {
+        name: string
+        email?: string
+        phone?: string
+        address?: string
+        rfc?: string
+        tags?: string[]
+        notes?: string
+    }
+
+    if (!name) {
+        return reply.code(400).send({ error: 'El nombre es requerido' })
+    }
+
+    const customer = await prisma.customer.create({
+        data: {
+            name,
+            email: email || null,
+            phone: phone || null,
+            address: address || null,
+            rfc: rfc || null,
+            tags: tags ? JSON.stringify(tags) : null,
+            notes: notes || null,
+        },
+    })
+
+    await logAction(user.id, 'CREATE_CUSTOMER', 'Customer', customer.id, { name })
+
+    return customer
+})
+
+fastify.put('/api/customers/:id', {
+    preHandler: [fastify.authenticate as any],
+}, async (request, reply) => {
+    const user = request.user as UserPayload
+
+    if (!hasPermission(user.role, 'customers:edit')) {
+        return reply.code(403).send({ error: 'No tienes permisos para editar clientes' })
+    }
+
+    const { id } = request.params as { id: string }
+    const { name, email, phone, address, rfc, tags, notes } = request.body as {
+        name?: string
+        email?: string | null
+        phone?: string | null
+        address?: string | null
+        rfc?: string | null
+        tags?: string[]
+        notes?: string | null
+    }
+
+    const customer = await prisma.customer.update({
+        where: { id },
+        data: {
+            ...(name && { name }),
+            ...(email !== undefined && { email }),
+            ...(phone !== undefined && { phone }),
+            ...(address !== undefined && { address }),
+            ...(rfc !== undefined && { rfc }),
+            ...(tags && { tags: JSON.stringify(tags) }),
+            ...(notes !== undefined && { notes }),
+        },
+    })
+
+    await logAction(user.id, 'UPDATE_CUSTOMER', 'Customer', customer.id, { name: customer.name })
+
+    return customer
+})
+
+fastify.delete('/api/customers/:id', {
+    preHandler: [fastify.authenticate as any],
+}, async (request, reply) => {
+    const user = request.user as UserPayload
+
+    if (!hasPermission(user.role, 'customers:delete')) {
+        return reply.code(403).send({ error: 'No tienes permisos para eliminar clientes' })
+    }
+
+    const { id } = request.params as { id: string }
+
+    await prisma.customer.delete({
+        where: { id },
+    })
+
+    await logAction(user.id, 'DELETE_CUSTOMER', 'Customer', id, {})
+
+    return { success: true }
+})
+
 // ======== RUTAS DE CATEGORÍAS ========
 
 fastify.get('/api/categories', async () => {
